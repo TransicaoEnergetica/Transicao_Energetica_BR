@@ -29,13 +29,13 @@ Este Dashboard faz parte do Projeto de Extensão em Energias Renováveis e Mudan
 
 Os dados são de geração e consumo de eletricidade, obtidos no site da EIA (US Energy Information Administration)
 
-Atualização: 29/10/2025
+Atualização: 18/05/2026
 
 # Evolução da Geração
 
 ```{r}
 
-data <- readxl::read_excel("data/EIA_29-10-25.xlsx")
+data <- readxl::read_excel("data/EIA_18-05-26-BR.xlsx")
 
 data <- data %>% select(-hierarquia)
 
@@ -55,9 +55,9 @@ p<- d_m2 |>
   geom_point(shape=2,color="blue") +
   geom_line() +
   scale_y_continuous(limits = c(0, 1000)) + 
-  annotate("text", x = 2023, y = 750, label = as.character(max_geracao), color = "gray60", size = 3) +
+  annotate("text", x = 2024, y = 770, label = as.character(max_geracao), color = "gray60", size = 3) +
   labs(y = "Geração em Bilhões de KWH", x="Ano",
-       title = "Geração no Brasil entre 1980 e 2023") +
+       title = "Geração no Brasil entre 1980 e 2024") +
   theme_minimal()
   
 p
@@ -75,7 +75,7 @@ p<- d_m2 |>
   geom_area(aes(color=Fonte, fill=Fonte), alpha=.5) +
   scale_y_continuous(limits = c(0, 1000)) + 
   labs(x = "Ano", y="Geração em Bilhões de KWH",
-       title = "Geração por Fonte no Brasil entre 1980 e 2023") +
+       title = "Geração por Fonte no Brasil entre 1980 e 2024") +
   theme_minimal()
 
 p
@@ -91,14 +91,14 @@ p<- d_m2 |>
   ggplot(aes(x=Ano, y=BkWh)) + 
   geom_area(aes(color=Fonte, fill=Fonte), alpha=.5, position= "fill") +
   labs(x = "Ano", y="% de Geração",
-       title = "Geração por Fonte no Brasil entre 1980 e 2023") +
+       title = "Geração por Fonte no Brasil entre 1980 e 2024") +
   theme_minimal()
 
 p
 ```  
 
 
-# Zoom em 2023
+# Zoom em 2024
 
 ## Row {.tabset}
 
@@ -114,7 +114,7 @@ d_m2 <- d_m2 |> mutate(Total= Nuclear + Combustivel_Fossil + Renovaveis) |>
          Percentual_Fossil= (Combustivel_Fossil/Total)*100,
          Percentual_Nuclear= (Nuclear/Total)*100) |> select(Ano, Percentual_Renovavel, Percentual_Fossil, Percentual_Nuclear) |> pivot_longer(cols=c("Percentual_Renovavel","Percentual_Fossil","Percentual_Nuclear"), names_to="Fonte", values_to="Percentual")
 
-value <- d_m2 |> filter(Ano==2023 & Fonte=="Percentual_Renovavel") |> pull(Percentual)   # Scale to 0-100
+value <- d_m2 |> filter(Ano==2024 & Fonte=="Percentual_Renovavel") |> pull(Percentual)   # Scale to 0-100
 
 ggplot() +
   # Add gap to bottom
@@ -146,13 +146,13 @@ ggplot() +
   ) +
   # This part adds the tick labels (and removes everything else)
   scale_x_continuous(breaks = seq(0,100,10)) +
-  labs(title = "Percentual de Geração de Renováveis no Brasil em 2023") +
+  labs(title = "Percentual de Geração de Renováveis no Brasil em 2024") +
   theme_void() +
   theme(axis.text.x = element_text(size = 14))
 ```
 
 ```{r}
-#| title: Geração por Fonte em 2023
+#| title: Geração por Fonte em 2024
 
 # Transformação em percentual anual
 d_m <- data |> pivot_wider(id_cols=c("nivel","Ano"),names_from="tipo", values_from="BkWh")
