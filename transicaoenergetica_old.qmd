@@ -1,0 +1,183 @@
+---
+title: "Transição Energética no Brasil"
+format: dashboard
+nav-buttons:
+- icon: github
+  href: https://github.com/TransicaoEnergetica
+  aria-label: GitHub
+- icon: youtube
+  href: https://homeprojextransicaoenergetica.netlify.app/_site/
+  aria-label: ProjExt
+theme: [sandstone, theme/custom.scss]
+fig-width: 10
+fig-asp: 0.3
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+#| label: load-packages
+#| message: false
+#| context: setup
+library(tidyverse)
+library(ggplot2)
+```
+
+# {.sidebar}
+
+Este Dashboard faz parte do Projeto de Extensão em Energias Renováveis e Mudanças Climáticas.
+
+Os dados são de geração e consumo de eletricidade, obtidos no site da EIA (US Energy Information Administration)
+
+Atualização: 18/05/2026
+
+# Evolução da Geração
+
+```{r}
+
+data <- readxl::read_excel("data/EIA_18-05-26-BR.xlsx")
+
+data <- data %>% select(-hierarquia)
+
+```
+
+## Row {.tabset}
+
+```{r}
+#| title: Geração
+d_m <- data |> pivot_wider(id_cols="Ano",names_from="tipo", values_from="BkWh")
+d_m2 <- d_m |> rename(Geracao=Generation) |> select(Ano, Geracao) 
+
+max_geracao <- round(max(d_m2$Geracao, na.rm = TRUE),2)
+
+p<- d_m2 |>
+  ggplot(aes(x=Ano, y=Geracao)) + 
+  geom_point(shape=2,color="blue") +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1000)) + 
+  annotate("text", x = 2024, y = 770, label = as.character(max_geracao), color = "gray60", size = 3) +
+  labs(y = "Geração em Bilhões de KWH", x="Ano",
+       title = "Geração no Brasil entre 1980 e 2024") +
+  theme_minimal()
+  
+p
+```
+
+
+```{r}
+#| title: Distribuição por Fonte
+d_m <- data |> pivot_wider(id_cols=c("nivel","Ano"),names_from="tipo", values_from="BkWh")
+d_m2 <- d_m |> filter(nivel==2) |>
+  rename(Combustivel_Fossil=Fossil_fuels, Renovaveis=Renewables) |> select(Ano, Nuclear, Combustivel_Fossil, Renovaveis) |> pivot_longer(cols=c("Nuclear","Combustivel_Fossil","Renovaveis"), names_to="Fonte", values_to="BkWh")
+
+p<- d_m2 |> 
+  ggplot(aes(x=Ano, y=BkWh)) + 
+  geom_area(aes(color=Fonte, fill=Fonte), alpha=.5) +
+  scale_y_continuous(limits = c(0, 1000)) + 
+  labs(x = "Ano", y="Geração em Bilhões de KWH",
+       title = "Geração por Fonte no Brasil entre 1980 e 2024") +
+  theme_minimal()
+
+p
+```  
+
+```{r}
+#| title: Proporção por Fonte
+d_m <- data |> pivot_wider(id_cols=c("nivel","Ano"),names_from="tipo", values_from="BkWh")
+d_m2 <- d_m |> filter(nivel==2) |>
+  rename(Combustivel_Fossil=Fossil_fuels, Renovaveis=Renewables) |> select(Ano, Nuclear, Combustivel_Fossil, Renovaveis) |> pivot_longer(cols=c("Nuclear","Combustivel_Fossil","Renovaveis"), names_to="Fonte", values_to="BkWh")
+
+p<- d_m2 |> 
+  ggplot(aes(x=Ano, y=BkWh)) + 
+  geom_area(aes(color=Fonte, fill=Fonte), alpha=.5, position= "fill") +
+  labs(x = "Ano", y="% de Geração",
+       title = "Geração por Fonte no Brasil entre 1980 e 2024") +
+  theme_minimal()
+
+p
+```  
+
+
+# Zoom em 2024
+
+## Row {.tabset}
+
+```{r}
+#| title: Indicador de Percentual de Renovavel
+
+# Transformação em percentual anual
+d_m <- data |> pivot_wider(id_cols=c("nivel","Ano"),names_from="tipo", values_from="BkWh")
+d_m2 <- d_m |> filter(nivel==2) |>
+  rename(Combustivel_Fossil=Fossil_fuels, Renovaveis=Renewables) |> select(Ano, Nuclear, Combustivel_Fossil, Renovaveis)
+d_m2 <- d_m2 |> mutate(Total= Nuclear + Combustivel_Fossil + Renovaveis) |>
+  mutate(Percentual_Renovavel= (Renovaveis/Total)*100, 
+         Percentual_Fossil= (Combustivel_Fossil/Total)*100,
+         Percentual_Nuclear= (Nuclear/Total)*100) |> select(Ano, Percentual_Renovavel, Percentual_Fossil, Percentual_Nuclear) |> pivot_longer(cols=c("Percentual_Renovavel","Percentual_Fossil","Percentual_Nuclear"), names_to="Fonte", values_to="Percentual")
+
+value <- d_m2 |> filter(Ano==2024 & Fonte=="Percentual_Renovavel") |> pull(Percentual)   # Scale to 0-100
+
+ggplot() +
+  # Add gap to bottom
+  coord_radial(
+    start = 4/3 * pi,  # 240°
+    end = 2/3 * pi,    # 120°
+    expand = FALSE
+  ) +
+  # Draw areas
+  annotate(
+    geom = "rect", 
+    xmin = c(-Inf, 3, 5), xmax = c(3, 5, Inf),
+    ymin = .6, ymax = 1,
+    fill = c("#FF6D5C", "#DFAD43", "#45B4A7")
+  ) +
+  # Draw ticks
+  annotate(
+    geom = "segment", 
+    x = seq(0,100,10), xend = seq(0,100,10), 
+    y = .6, yend = 1,
+    linewidth = 1, color = "white"
+  ) +
+  # Draw needle
+  annotate(
+    geom = "pointrange", 
+    x = value, y = 0,
+    ymin = 0, ymax = 1.05,
+    size = 2, linewidth = 1.3, lineend = "round"
+  ) +
+  # This part adds the tick labels (and removes everything else)
+  scale_x_continuous(breaks = seq(0,100,10)) +
+  labs(title = "Percentual de Geração de Renováveis no Brasil em 2024") +
+  theme_void() +
+  theme(axis.text.x = element_text(size = 14))
+```
+
+```{r}
+#| title: Geração por Fonte em 2024
+
+# Transformação em percentual anual
+d_m <- data |> pivot_wider(id_cols=c("nivel","Ano"),names_from="tipo", values_from="BkWh")
+d_m2 <- d_m |> filter(nivel==2) |>
+  rename(Combustivel_Fossil=Fossil_fuels, Renovaveis=Renewables) |> select(Ano, Nuclear, Combustivel_Fossil, Renovaveis)
+d_m2 <- d_m2 |> mutate(Total= Nuclear + Combustivel_Fossil + Renovaveis) |>
+  mutate(Percentual_Renovavel= (Renovaveis/Total)*100, 
+         Percentual_Fossil= (Combustivel_Fossil/Total)*100,
+         Percentual_Nuclear= (Nuclear/Total)*100) |> select(Ano, Percentual_Renovavel, Percentual_Fossil, Percentual_Nuclear) |> pivot_longer(cols=c("Percentual_Renovavel","Percentual_Fossil","Percentual_Nuclear"), names_to="Fonte", values_to="Percentual")
+
+d_2023 <- d_m2 |> filter(Ano==2023) |> 
+  mutate(Fonte = recode(Fonte,
+                        "Percentual_Renovavel" = "Renováveis",
+                        "Percentual_Fossil" = "Combustíveis Fósseis",
+                        "Percentual_Nuclear" = "Nuclear"))
+
+
+# Same code as above — just inner.radius is new
+ggplot(d_2023, aes(x = Percentual, y = "", fill = Fonte)) +
+  geom_col(width = 1) +
+  coord_radial(
+    expand = FALSE,
+    inner.radius = 0.5
+  )
+
+
+```
+
